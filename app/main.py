@@ -54,7 +54,7 @@ def signup(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
     new_user = models.User(
         username=user.username, 
         email=user.email, 
-        hashed_password=security.pwd_context.hash(clean_password),
+        hashed_password=security.get_password_hash(user.password), # Naya function
         is_admin=admin_status
     )
     db.add(new_user)
