@@ -1,0 +1,12 @@
+# Secrets
+.env
+
+# Python junk
+__pycache__/
+*.pyc
+.venv/
+env/
+
+# Project Specific
+backend/uploads/*
+.DS_Store   
