@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit.components.v1 as components
 
 # Backend URL
-BASE_URL = "https://neonsecurevaultprojectfrontend-production.up.railway.app"
+BASE_URL = "https://neonsecurevaultproject-production.up.railway.app"
 
 st.set_page_config(page_title="NeonVault Admin Pro", layout="wide", initial_sidebar_state="collapsed")
 
