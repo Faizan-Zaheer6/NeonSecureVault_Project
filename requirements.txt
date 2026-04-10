@@ -9,3 +9,5 @@ python-dotenv
 email-validator
 pydantic[email]
 python-multipart
+streamlit
+requests
