@@ -46,15 +46,15 @@ def signup(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
     if db.query(models.User).filter(models.User.email == user.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
     
-    # First user logic: neon@admin.com hamesha admin hoga
     admin_status = True if user.email == "neon@admin.com" else False
     
-  # Signup block ka foolproof version
+    # 72 byte limit se bachne ke liye [:71] ka cut lagaya hai
+    clean_password = str(user.password)[:71]
+    
     new_user = models.User(
         username=user.username, 
         email=user.email, 
-        # Manual encoding ensures it's treated as a clean string
-        hashed_password=security.pwd_context.hash(str(user.password)[:71]), 
+        hashed_password=security.pwd_context.hash(clean_password),
         is_admin=admin_status
     )
     db.add(new_user)
