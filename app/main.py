@@ -52,7 +52,7 @@ def signup(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
     new_user = models.User(
         username=user.username, 
         email=user.email, 
-        hashed_password=security.get_password_hash(user.password),
+        hashed_password = pwd_context.hash(str(user.password)) 
         is_admin=admin_status
     )
     db.add(new_user)
