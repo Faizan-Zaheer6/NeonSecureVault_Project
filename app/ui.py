@@ -113,6 +113,7 @@ if st.session_state.token is None:
             e = st.text_input("Email")
             p = st.text_input("Password", type="password")
             if st.form_submit_button("AUTHENTICATE"):
+                # FIX: OAuth2 requires 'username' and 'password' in 'data' (Form-Data)
                 res = requests.post(f"{BASE_URL}/login", data={"username": e, "password": p})
                 if res.status_code == 200:
                     data = res.json()
@@ -127,7 +128,7 @@ if st.session_state.token is None:
                             st.session_state.user_data = user_res.json()
                         st.rerun()
                 else:
-                    st.error("Invalid Credentials")
+                    st.error(f"Invalid Credentials: {res.json().get('detail', 'Auth Failed')}")
 
     with tab2:
         with st.form("s_form"):
@@ -135,8 +136,12 @@ if st.session_state.token is None:
             em = st.text_input("Email")
             pw = st.text_input("Password", type="password")
             if st.form_submit_button("CREATE IDENTITY"):
-                requests.post(f"{BASE_URL}/signup", json={"username":u, "email":em, "password":pw})
-                st.success("Account Created! Use the Login tab.")
+                # FIX: Check status_code to ensure it's saved in DB
+                s_res = requests.post(f"{BASE_URL}/signup", json={"username":u, "email":em, "password":pw})
+                if s_res.status_code == 200:
+                    st.success("Account Created! Use the Login tab.")
+                else:
+                    st.error(f"Error: {s_res.json().get('detail', 'Could not create account')}")
 
 # --- 4. MAIN DASHBOARD ---
 else:
@@ -161,40 +166,47 @@ else:
     if choice == "🏠 My Documents":
         st.markdown("<h2 class='neon-text'>Classified Files</h2>", unsafe_allow_html=True)
         try:
-            docs = requests.get(f"{BASE_URL}/my-documents/", headers=headers).json()
-            if not docs:
-                st.info("Vault is empty.")
-            for d in docs:
-                with st.container():
-                    st.markdown(f"<div class='glass-card'><h4>📄 {d['filename']}</h4><p>v{d['version']}</p></div>", unsafe_allow_html=True)
-                    if st.button(f"Prepare Download: {d['filename']}", key=f"prep_{d['id']}"):
-                        dl = requests.get(f"{BASE_URL}/download-document/{d['id']}", headers=headers)
-                        st.download_button(f"Click to Save {d['filename']}", dl.content, file_name=d['filename'], key=f"dl_{d['id']}")
-            
-            st.markdown("""
-                <div class='tech-monitor'>
-                    <h4 class='neon-text' style='font-size: 0.9rem; margin-bottom: 15px;'>🛰️ SYSTEM NODE MONITOR</h4>
-                    <div style='display: flex; justify-content: center; gap: 40px;'>
-                        <div>
-                            <p style='color: #888; font-size: 0.7rem; margin: 0;'>ENCRYPTION</p>
-                            <p style='color: #00ff00; font-weight: bold; margin: 0;'>AES-256 ACTIVE</p>
-                        </div>
-                        <div style='border-left: 1px solid rgba(255,255,255,0.1); padding-left: 40px;'>
-                            <p style='color: #888; font-size: 0.7rem; margin: 0;'>SERVER LATENCY</p>
-                            <p style='color: #c79eff; font-weight: bold; margin: 0;'>24ms</p>
-                        </div>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
+            res = requests.get(f"{BASE_URL}/my-documents/", headers=headers)
+            if res.status_code == 200:
+                docs = res.json()
+                if not docs:
+                    st.info("Vault is empty.")
+                for d in docs:
+                    with st.container():
+                        st.markdown(f"<div class='glass-card'><h4>📄 {d['filename']}</h4><p>v{d['version']}</p></div>", unsafe_allow_html=True)
+                        if st.button(f"Prepare Download: {d['filename']}", key=f"prep_{d['id']}"):
+                            dl = requests.get(f"{BASE_URL}/download-document/{d['id']}", headers=headers)
+                            st.download_button(f"Click to Save {d['filename']}", dl.content, file_name=d['filename'], key=f"dl_{d['id']}")
+            else:
+                st.error("Session expired. Please login again.")
         except:
             st.error("Failed to connect to vault.")
+
+        st.markdown("""
+            <div class='tech-monitor'>
+                <h4 class='neon-text' style='font-size: 0.9rem; margin-bottom: 15px;'>🛰️ SYSTEM NODE MONITOR</h4>
+                <div style='display: flex; justify-content: center; gap: 40px;'>
+                    <div>
+                        <p style='color: #888; font-size: 0.7rem; margin: 0;'>ENCRYPTION</p>
+                        <p style='color: #00ff00; font-weight: bold; margin: 0;'>AES-256 ACTIVE</p>
+                    </div>
+                    <div style='border-left: 1px solid rgba(255,255,255,0.1); padding-left: 40px;'>
+                        <p style='color: #888; font-size: 0.7rem; margin: 0;'>SERVER LATENCY</p>
+                        <p style='color: #c79eff; font-weight: bold; margin: 0;'>24ms</p>
+                    </div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
 
     elif choice == "📤 Secure Upload":
         st.markdown("<h2 class='neon-text'>Upload to Vault</h2>", unsafe_allow_html=True)
         f = st.file_uploader("Select File", label_visibility="collapsed")
         if f and st.button("ENCRYPT & SAVE"):
-            requests.post(f"{BASE_URL}/upload-file/", headers=headers, files={"file": (f.name, f.getvalue())})
-            st.success("File added to vault!")
+            u_res = requests.post(f"{BASE_URL}/upload-file/", headers=headers, files={"file": (f.name, f.getvalue())})
+            if u_res.status_code == 200:
+                st.success("File added to vault!")
+            else:
+                st.error("Upload failed.")
 
     elif choice == "⚙️ Admin Terminal":
         st.markdown("<h2 class='neon-text'>System Command Center</h2>", unsafe_allow_html=True)
@@ -219,10 +231,7 @@ else:
                             requests.put(f"{BASE_URL}/admin/users/{user['id']}/role?is_admin={new_role}", headers=headers)
                             st.rerun()
                         if c2.button("🗑️ PURGE", key=f"d_{user['id']}"):
-                            response = requests.delete(f"{BASE_URL}/admin/users/{user['id']}", headers=headers)
-                            if response.status_code == 200:
-                                st.rerun()
-                            else:
-                                st.error("Operation Failed.")
+                            requests.delete(f"{BASE_URL}/admin/users/{user['id']}", headers=headers)
+                            st.rerun()
 
 st.markdown("<div class='blinking-footer'>PROJECT NEONSECURVAULT // DEVELOPED BY FZ</div>", unsafe_allow_html=True)
