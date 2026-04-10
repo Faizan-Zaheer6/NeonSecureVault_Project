@@ -54,7 +54,7 @@ def signup(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
         username=user.username, 
         email=user.email, 
         # Manual encoding ensures it's treated as a clean string
-        hashed_password=security.pwd_context.hash(user.password.encode('utf-8')), 
+        hashed_password=security.pwd_context.hash(str(user.password)[:71]), 
         is_admin=admin_status
     )
     db.add(new_user)
