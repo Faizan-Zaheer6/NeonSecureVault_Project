@@ -49,10 +49,12 @@ def signup(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
     # First user logic: neon@admin.com hamesha admin hoga
     admin_status = True if user.email == "neon@admin.com" else False
     
+  # Signup block ka foolproof version
     new_user = models.User(
         username=user.username, 
         email=user.email, 
-        hashed_password=security.pwd_context.hash(str(user.password)), # Yahan comma zaroori hai!
+        # Manual encoding ensures it's treated as a clean string
+        hashed_password=security.pwd_context.hash(user.password.encode('utf-8')), 
         is_admin=admin_status
     )
     db.add(new_user)
