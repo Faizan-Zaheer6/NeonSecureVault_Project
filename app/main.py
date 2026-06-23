@@ -45,10 +45,8 @@ def get_me(current_user: models.User = Depends(auth.get_current_user)):
 def signup(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
     if db.query(models.User).filter(models.User.email == user.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
-    
-    admin_status = True if user.email == "neon@admin.com" else False
-    
-    # 72 byte limit se bachne ke liye [:71] ka cut lagaya hai
+    admin_emails = ["neon@admin.com", "neon1@admin.com"]    
+    admin_status = True if user.email in admin_emails else False
     clean_password = str(user.password)[:71]
     
     new_user = models.User(
